@@ -21,7 +21,6 @@ State lives in ~/.mcai-webapp (override with MCAI_WEBAPP_HOME):
 """
 
 import argparse
-import glob
 import http.server
 import json
 import os
@@ -47,6 +46,7 @@ HOME = os.path.expanduser(os.environ.get("MCAI_WEBAPP_HOME", "~/.mcai-webapp"))
 TOKEN_FILE = os.path.join(HOME, "token.json")
 ENV_FILE = os.path.join(HOME, ".env")
 REGISTRY_FILE = os.path.join(HOME, "registry.json")
+CLIENT_FILE = os.path.join(HOME, "client.json")
 
 ACCESS_DOMAIN = "DOMAIN"
 ACCESS_PUBLIC = "ANYONE_ANONYMOUS"
@@ -160,52 +160,88 @@ def http_json(method, url, body=None, headers=None, timeout=60):
 
 # ─────────────────────────────── credentials ───────────────────────────────
 
-def find_client_secret():
-    """Locate a Google Desktop OAuth client. Nothing ships with this plugin."""
+def _validate_client(node, source):
+    """Every path must produce a dict with both credentials, whatever the source."""
+    if not isinstance(node, dict):
+        die("BAD_OAUTH_CLIENT", f"{source} did not contain an 'installed' object")
+    if not node.get("client_id") or not node.get("client_secret"):
+        die("BAD_OAUTH_CLIENT", f"{source} is missing client_id/client_secret")
+    return node
+
+
+def _client_from_file(path, source):
+    """Parse and validate an OAuth client JSON file. Any problem dies via die() —
+    this is only used for files the user explicitly pointed at (MCAI_CLIENT_SECRET),
+    so a bad file is worth surfacing loudly rather than silently working around."""
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        die("BAD_OAUTH_CLIENT", f"{path} is not valid JSON")
+    if not isinstance(data, dict):
+        die("BAD_OAUTH_CLIENT", f"{path} is not valid JSON")
+    return _validate_client(data.get("installed") or data.get("web"), source)
+
+
+def _cached_client():
+    """Read CLIENT_FILE if it holds a usable client, else None.
+
+    Unlike _client_from_file, a bad cache is not worth a hard failure: it is
+    our own write, most likely stale or truncated rather than something the
+    user is relying on, so we just treat it as a miss and let the caller
+    refetch from mcai.dev instead of forcing the user to go delete the file.
+    """
+    try:
+        with open(CLIENT_FILE) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    node = data.get("installed") or data.get("web")
+    if not isinstance(node, dict) or not node.get("client_id") or not node.get("client_secret"):
+        return None
+    return node
+
+
+def get_oauth_client(force=False):
+    """Resolve the Google OAuth client.
+
+    An explicit MCAI_CLIENT_SECRET always wins — it is how IT or a developer
+    overrides the shared client. Otherwise the client comes from mcai.dev and is
+    cached locally, so day-to-day commands never depend on the server being up.
+    force=True skips the cache; that is how a rotated client reaches an existing
+    install.
+    """
     explicit = os.environ.get("MCAI_CLIENT_SECRET")
     if explicit:
         p = os.path.expanduser(explicit)
         if not os.path.exists(p):
-            die("CLIENT_SECRET_NOT_FOUND", f"MCAI_CLIENT_SECRET points at {p}, which does not exist")
-        return p
+            die("CLIENT_SECRET_NOT_FOUND",
+                f"MCAI_CLIENT_SECRET points at {p}, which does not exist")
+        return _client_from_file(p, p)
 
-    gws_dir = os.environ.get("GOOGLE_WORKSPACE_CLI_CONFIG_DIR")
-    if gws_dir:
-        p = os.path.join(os.path.expanduser(gws_dir), "client_secret.json")
-        if os.path.exists(p):
-            return p
+    if not force:
+        cached = _cached_client()
+        if cached is not None:
+            return cached
 
-    candidates = sorted(
-        glob.glob(os.path.expanduser("~/.config/gws*/client_secret.json"))
-    )
-    if len(candidates) == 1:
-        return candidates[0]
-    if len(candidates) > 1:
-        die(
-            "MULTIPLE_CLIENT_SECRETS",
-            "found several gws profiles: " + ", ".join(candidates),
-            "pick one with  export MCAI_CLIENT_SECRET=<path>",
-        )
+    url = f"{MCAI_BASE}/api/oauth-client.php"
+    status, payload = http_json("GET", url, headers={"X-API-Key": mcai_key()})
 
-    die(
-        "NO_CLIENT_SECRET",
-        "no Google Desktop OAuth client found",
-        "create a Desktop OAuth client in your own GCP project, download the JSON, "
-        "then  export MCAI_CLIENT_SECRET=/path/to/client_secret.json\n"
-        "     (gws CLI users: it is normally ~/.config/gws-<profile>/client_secret.json — "
-        "note that oauth-client.json in the same folder is a different, inactive client)",
-    )
+    if status == 401:
+        die("MCAI_UNAUTHORIZED", "mcai.dev rejected the API key",
+            "generate a new one at " + MCAI_BASE + "/admin/ → Settings → API Keys, "
+            "then rerun /mcai-webapp:setup")
+    if status == 503:
+        die("NO_OAUTH_CLIENT", "mcai.dev has no OAuth client configured",
+            "an administrator must paste one at " + MCAI_BASE + "/admin/ → Settings")
+    if status >= 400 or not isinstance(payload, dict):
+        text = json.dumps(payload)[:300] if isinstance(payload, (dict, list)) else str(payload)[:300]
+        die("OAUTH_CLIENT_FETCH_FAILED", f"HTTP {status} from {url} — {text}")
 
-
-def load_client():
-    path = find_client_secret()
-    with open(path) as f:
-        data = json.load(f)
-    node = data.get("installed") or data.get("web")
-    if not node:
-        die("BAD_CLIENT_SECRET", f"{path} has no 'installed' key — is it a Desktop OAuth client?")
-    if "client_id" not in node or "client_secret" not in node:
-        die("BAD_CLIENT_SECRET", f"{path} is missing client_id/client_secret")
+    node = _validate_client(payload.get("installed"), url)
+    write_private(CLIENT_FILE, json.dumps({"installed": node}))
     return node
 
 
@@ -229,7 +265,7 @@ def open_in_browser(url):
 def run_oauth_flow():
     """Loopback installed-app flow. 'prompt' is deliberately omitted — prompt=none
     fails with immediate_failed on Desktop clients even when consent already exists."""
-    client = load_client()
+    client = get_oauth_client()
     holder = {}
     done = threading.Event()
 
@@ -303,26 +339,64 @@ def run_oauth_flow():
     return tok
 
 
+def _post_form(url, fields, timeout=60):
+    """POST form-encoded fields and return the parsed JSON body.
+
+    Split out from access_token() so the retry logic can be tested without
+    reaching the network.
+    """
+    body = urllib.parse.urlencode(fields).encode()
+    with urllib.request.urlopen(url, body, timeout=timeout) as r:
+        return json.load(r)
+
+
 def access_token():
-    """Exchange the stored refresh token for a fresh access token."""
+    """Exchange the stored refresh token for a fresh access token.
+
+    A refresh failure may simply mean the shared OAuth client was rotated on
+    mcai.dev, so refetch it once and try again before giving up.
+    """
     if not os.path.exists(TOKEN_FILE):
         die("NOT_AUTHENTICATED", "no OAuth token on this machine", "run /mcai-webapp:setup")
-    client = load_client()
     with open(TOKEN_FILE) as f:
-        tok = json.load(f)
-    body = urllib.parse.urlencode({
-        "client_id": client["client_id"],
-        "client_secret": client["client_secret"],
-        "refresh_token": tok["refresh_token"],
-        "grant_type": "refresh_token",
-    }).encode()
+        try:
+            tok = json.load(f)
+        except json.JSONDecodeError:
+            die("BAD_TOKEN_FILE", f"{TOKEN_FILE} is not valid JSON",
+                "run /mcai-webapp:setup --force")
+    if "refresh_token" not in tok:
+        die("BAD_TOKEN_FILE", f"{TOKEN_FILE} has no refresh_token field",
+            "run /mcai-webapp:setup --force")
+
+    def attempt(client):
+        resp = _post_form(TOKEN_URL, {
+            "client_id": client["client_id"],
+            "client_secret": client["client_secret"],
+            "refresh_token": tok["refresh_token"],
+            "grant_type": "refresh_token",
+        })
+        token = resp.get("access_token")
+        if token is None:
+            die("TOKEN_REFRESH_FAILED", "response had no access_token field",
+                "the stored token is stale or revoked — run /mcai-webapp:setup --force")
+        return token
+
     try:
-        with urllib.request.urlopen(TOKEN_URL, body, timeout=60) as r:
-            return json.load(r)["access_token"]
+        return attempt(get_oauth_client())
     except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", "replace")[:300]
+        e.close()
+    except urllib.error.URLError:
+        pass
+
+    try:
+        return attempt(get_oauth_client(force=True))
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        if isinstance(e, urllib.error.HTTPError):
+            detail = e.read().decode("utf-8", "replace")[:300]
+        else:
+            detail = str(e)
         die("TOKEN_REFRESH_FAILED", detail,
-            "the stored token is stale or revoked — run /mcai-webapp:setup again")
+            "the stored token is stale or revoked — run /mcai-webapp:setup --force")
 
 
 def read_env():
@@ -530,17 +604,8 @@ def cmd_setup(args):
         die("PYTHON_TOO_OLD", f"need Python 3.8+, found {sys.version.split()[0]}")
     ok(f"python {sys.version.split()[0]}")
 
-    path = find_client_secret()
-    ok(f"OAuth client: {path.replace(os.path.expanduser('~'), '~')}")
-
-    if os.path.exists(TOKEN_FILE) and not args.force:
-        ok("OAuth token already present (use --force to re-authorise)")
-    else:
-        info("\nA browser window will open for Google consent.")
-        info("Sign in with your WORK account and click Continue.\n")
-        run_oauth_flow()
-        ok("OAuth token saved (chmod 600)")
-
+    # The mcai.dev key comes first: it is what unlocks the OAuth client, and
+    # failing here means we never open a browser the user cannot complete.
     key = args.api_key or os.environ.get("MCAI_API_KEY") or read_env().get("MCAI_API_KEY")
     if not key:
         info(f"\nGenerate an API key at {MCAI_BASE}/admin/ → Settings → API Keys.")
@@ -552,14 +617,32 @@ def cmd_setup(args):
             die("NO_MCAI_API_KEY", "no key entered",
                 f"rerun with  --api-key <key>  once you have one from {MCAI_BASE}/admin/")
 
-    if probe_mcai_key(key):
-        existing = read_env()
-        existing["MCAI_API_KEY"] = key
-        write_private(ENV_FILE, "".join(f"{k}={v}\n" for k, v in existing.items()))
-        ok("mcai.dev API key verified and saved (chmod 600)")
-    else:
+    if not probe_mcai_key(key):
         die("MCAI_UNAUTHORIZED", "mcai.dev rejected that key",
             f"check it at {MCAI_BASE}/admin/ → Settings → API Keys")
+
+    existing = read_env()
+    existing["MCAI_API_KEY"] = key
+    write_private(ENV_FILE, "".join(f"{k}={v}\n" for k, v in existing.items()))
+    ok("mcai.dev API key verified and saved (chmod 600)")
+
+    os.environ["MCAI_API_KEY"] = key      # override a stale exported MCAI_API_KEY for the
+                                           # rest of this process — mcai_key() checks the
+                                           # environment before .env, so without this the
+                                           # very next call would authenticate with the old key
+    client = get_oauth_client(force=True)
+    if os.environ.get("MCAI_CLIENT_SECRET"):
+        ok(f"OAuth client: {client['client_id'].split('-')[0]} (from MCAI_CLIENT_SECRET)")
+    else:
+        ok(f"OAuth client: {client['client_id'].split('-')[0]} (fetched from mcai.dev, cached chmod 600)")
+
+    if os.path.exists(TOKEN_FILE) and not args.force:
+        ok("OAuth token already present (use --force to re-authorise)")
+    else:
+        info("\nA browser window will open for Google consent.")
+        info("Sign in with your WORK account and click Continue.\n")
+        run_oauth_flow()
+        ok("OAuth token saved (chmod 600)")
 
     info("\n🎉 Setup complete. Publish something with:")
     info('   /mcai-webapp:publish ./page.html --title "My Page" --slug mypage')
@@ -570,8 +653,8 @@ def cmd_doctor(_args):
     info("mcai-webapp doctor\n")
 
     try:
-        path = find_client_secret()
-        ok(f"OAuth client: {path.replace(os.path.expanduser('~'), '~')}")
+        client = get_oauth_client()
+        ok(f"OAuth client: {client['client_id'].split('-')[0]}")
     except Fail as e:
         print(f"❌ {e}")
         problems += 1

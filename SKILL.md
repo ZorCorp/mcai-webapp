@@ -1,6 +1,6 @@
 ---
 name: mcai-webapp
-description: "Turn a prompt or an HTML file into a hosted web page behind a branded mcai.dev short link: draft the page from a prompt, review it locally, publish it as a Google Apps Script web app under the user's own Google Workspace account with a chosen access level (org / gmail / anyone / private), and keep updating it in place afterwards. Self-service: bring your own Google Desktop OAuth client and an mcai.dev API key; no clasp, no Node, no MCP server, just stdlib Python and two REST APIs. Redeploys happen in place so the /exec URL and the short link never change. Use when someone wants a page, deck, dashboard, or form created and put online behind a mcai.dev link, wants to update one they already published, or wants to audit what is currently live. Commands: /mcai-webapp:setup, /mcai-webapp:draft, /mcai-webapp:publish, /mcai-webapp:update, /mcai-webapp:adopt, /mcai-webapp:list."
+description: "Turn a prompt or an HTML file into a hosted web page behind a branded mcai.dev short link: draft the page from a prompt, review it locally, publish it as a Google Apps Script web app under the user's own Google Workspace account with a chosen access level (org / gmail / anyone / private), and keep updating it in place afterwards. Self-service: just an mcai.dev API key; no clasp, no Node, no MCP server, just stdlib Python and two REST APIs. Redeploys happen in place so the /exec URL and the short link never change. Use when someone wants a page, deck, dashboard, or form created and put online behind a mcai.dev link, wants to update one they already published, or wants to audit what is currently live. Commands: /mcai-webapp:setup, /mcai-webapp:draft, /mcai-webapp:publish, /mcai-webapp:update, /mcai-webapp:adopt, /mcai-webapp:list."
 license: MIT
 allowed-tools:
   - Bash(*)
@@ -34,28 +34,28 @@ logic, use OAuth scopes beyond deployment, or touch Google Sheets, Gmail, or Dri
 
 ## Prerequisites
 
-- **Python 3.8+** — stdlib only, nothing to install.
-- **A Google Desktop OAuth client.** Nothing ships with this plugin. gws CLI users already
-  have one at `~/.config/gws-<profile>/client_secret.json`; everyone else creates one in
-  their own GCP project. Point at it with `MCAI_CLIENT_SECRET` if it isn't auto-found.
+- **Python 3.8+** — stdlib only. If the machine has none, `setup` installs a pinned,
+  checksum-verified interpreter from python.org automatically.
+- **An mcai.dev API key** from <https://mcai.dev/admin/> → Settings → API Keys. Nothing else
+  to set up: the Google OAuth client itself is issued by mcai.dev against this same key, so
+  no one creates one in GCP by hand.
 - **The Apps Script API enabled for the account** at
   <https://script.google.com/home/usersettings>. This is a per-user toggle and is off by
   default. The skill detects the resulting error and says so.
-- **An mcai.dev API key** from <https://mcai.dev/admin/> → Settings → API Keys.
 
 ## Commands
 
 | Command | Does |
 |---|---|
-| `/mcai-webapp:setup` | One-time: OAuth consent, then store the mcai.dev API key. Idempotent. |
+| `/mcai-webapp:setup` | One-time: verify and store the mcai.dev API key, then OAuth consent. Idempotent. |
 | `/mcai-webapp:draft` | Prompt → self-contained HTML file, opened locally for review. Never publishes. |
 | `/mcai-webapp:publish` | New app — create project, push, deploy, create the short link, verify it. |
 | `/mcai-webapp:update` | Push new content to an existing app, redeploying in place. |
 | `/mcai-webapp:adopt` | Register a script someone already deployed, and give it a short link. |
 | `/mcai-webapp:list` | Table of everything published from this machine; `--check` probes each link. |
 
-`doctor` is also available directly (`python3 scripts/mcai_webapp.py doctor`) and reports on
-every credential without changing anything.
+`doctor` is also available directly (`PY=$(sh scripts/ensure_python.sh) && "$PY" scripts/mcai_webapp.py doctor`)
+and reports on every credential without changing anything.
 
 ## How it works
 
@@ -112,11 +112,12 @@ State lives in `~/.mcai-webapp/` (override with `MCAI_WEBAPP_HOME`).
 |---|---|---|
 | `token.json` | OAuth access + refresh token | 600 |
 | `.env` | `MCAI_API_KEY=…` | 600 |
+| `client.json` | cached OAuth client | 600 |
 | `registry.json` | slug → scriptId, deploymentId, execUrl, source path | 644 |
 
 | Env var | Purpose | Default |
 |---|---|---|
-| `MCAI_CLIENT_SECRET` | Path to the Desktop OAuth client JSON | auto-found under `~/.config/gws*/` |
+| `MCAI_CLIENT_SECRET` | Override path to your own OAuth client JSON | mcai.dev issues one automatically |
 | `MCAI_GOOGLE_ACCOUNT` | `login_hint` for the consent screen | none |
 | `MCAI_CHROME_PROFILE` | Chrome profile directory for consent, e.g. `Default` | system default browser |
 | `MCAI_API_KEY` | mcai.dev key, overriding `.env` | from `.env` |
@@ -129,7 +130,7 @@ State lives in `~/.mcai-webapp/` (override with `MCAI_WEBAPP_HOME`).
   a second deployment. Use `update`.
 - **Don't delete `~/.mcai-webapp/registry.json`.** It holds the `deploymentId`s; without them
   every future change becomes a new URL and every short link breaks. Recover with `adopt`.
-- **Don't print `token.json` or `.env`,** and don't paste their values into chat.
+- **Don't print `token.json`, `.env`, or `client.json`,** and don't paste their values into chat.
 - **Don't use an Embed-type mcai.dev link for an org-only app.** It sits behind Google login
   and will render a login wall inside the iframe. The skill only ever creates Redirect links.
 - **Don't publish anything sensitive as `--access anyone` (or `gmail`).** `ANYONE_ANONYMOUS`
@@ -140,9 +141,9 @@ State lives in `~/.mcai-webapp/` (override with `MCAI_WEBAPP_HOME`).
 
 | Symptom | Action |
 |---|---|
-| `NO_CLIENT_SECRET` | No Desktop OAuth client found. Set `MCAI_CLIENT_SECRET` to its path. |
-| `MULTIPLE_CLIENT_SECRETS` | Several gws profiles exist — pick one via `MCAI_CLIENT_SECRET`. |
-| `BAD_CLIENT_SECRET` | The JSON has no `installed` key. Use `client_secret.json`, not `oauth-client.json` — the latter is a different, inactive client. |
+| `NO_OAUTH_CLIENT` | mcai.dev has no OAuth client configured yet. An admin must paste one at mcai.dev/admin/ → Settings. |
+| `OAUTH_CLIENT_FETCH_FAILED` | mcai.dev returned an error (HTTP 4xx/5xx) while fetching the client. Retry; if it persists, check mcai.dev's status. |
+| `NETWORK_ERROR` | Couldn't reach mcai.dev at all — offline, DNS, or a firewall. Check the network and retry. |
 | `APPS_SCRIPT_API_DISABLED` | Turn on the toggle at <https://script.google.com/home/usersettings>, wait ~1 min, retry. |
 | `AUTH_ERROR: access_denied` | A Workspace admin policy is blocking this OAuth client. Ask the admin to allowlist it, or use an internal client from your own GCP project. |
 | `AUTH_TIMEOUT` | Consent wasn't completed in 3 min, or it opened in the wrong Chrome profile. Set `MCAI_CHROME_PROFILE` (work profile is usually `Default`) and retry. |
@@ -151,8 +152,22 @@ State lives in `~/.mcai-webapp/` (override with `MCAI_WEBAPP_HOME`).
 | `MCAI_UNAUTHORIZED` | Bad or rotated mcai.dev key. Generate a new one and rerun setup. |
 | `SLUG_TAKEN_ON_MCAI` | That short link exists already. Pick another `--slug`, or `adopt` it. |
 | `NO_WEB_APP_ENTRY_POINT` | The deployed manifest lost its lowercase `webapp` block. Rerun `update`. |
+| `PYTHON_DOWNLOAD_FAILED` | Couldn't download the Python installer from python.org. Check the network or a proxy, then retry. |
+| `PYTHON_CHECKSUM_MISMATCH` | The downloaded Python installer didn't match its expected checksum. Retry, or check for a proxy tampering with the download. |
+| `INSTALL_CANCELLED` / `NOT_ADMIN` | The Python installer needs admin rights. Ask an administrator to run it, or install Python 3.8+ yourself. |
+| `PYTHON_INSTALL_FAILED` | The installer ran but no usable Python turned up afterwards. Install Python 3.8+ manually and retry. |
 | Web app shows a login wall unexpectedly | It's `DOMAIN` access and the browser is signed into a personal account. Open it in the work Chrome profile. |
 | Non-Latin title produces the slug `app` | `slugify` only keeps `[a-z0-9]`. Pass `--slug` explicitly for CJK titles. |
+
+`setup` always contacts mcai.dev to fetch the OAuth client (never the local cache), so on an
+already-configured machine `setup` fails if mcai.dev is unreachable — that's the mechanism by
+which a centrally rotated client reaches machines set up before the rotation. Every other
+command reads the cached `client.json` and doesn't need mcai.dev to be reachable.
+
+If `client.json` becomes corrupt it is silently refetched — it's the tool's own write, so a
+bad copy is treated as a cache miss, not an error. `MCAI_CLIENT_SECRET`, by contrast, is an
+explicit override: a missing or invalid file there is a hard failure
+(`CLIENT_SECRET_NOT_FOUND` / `BAD_OAUTH_CLIENT`), never a silent fallback.
 
 ## Done
 

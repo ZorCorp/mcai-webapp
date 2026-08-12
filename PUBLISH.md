@@ -63,7 +63,7 @@ Sanity check before pushing:
 test -f .claude-plugin/plugin.json && jq -r '.name + " " + .version' .claude-plugin/plugin.json
 grep -c 'zorskill-release' CLAUDE.md      # must be 2 (BEGIN + END markers)
 ls commands/                              # adopt list publish setup update
-python3 -m py_compile scripts/mcai_webapp.py && echo "engine compiles"
+PY=$(sh scripts/ensure_python.sh) && "$PY" -m py_compile scripts/mcai_webapp.py && echo "engine compiles"
 ```
 
 ## 4 · Commit the marketplace side
@@ -107,16 +107,19 @@ Then, from a clean machine:
 
 ---
 
-## Before you release: prove the update path
+## Update path: verified
 
-`0.1.0` ships on the assumption that `deployments.update` preserves the `/exec` URL. That's
-what Google's docs and clasp's source say, but the handover session never actually
-redeployed — so it has not been tested against your account.
+`deployments.update` was confirmed against a real account to preserve the `/exec` URL byte
+for byte while the content updated across versions 1 → 2 → 3 (see
+`docs/superpowers/specs/2026-08-11-oauth-client-from-mcai-design.md` §10, "已完成嘅驗證"). No
+further test is needed before release.
 
-Register the app you already deployed:
+If you want to re-run the check yourself — e.g. after touching `push_content()`,
+`web_app_url()`, or the deployment update path — register the app you already deployed:
 
 ```bash
-python3 ~/Dev/mcaidemo/mcai-webapp/scripts/mcai_webapp.py adopt \
+ROOT=~/Dev/mcaidemo/mcai-webapp
+PY=$(sh "$ROOT/scripts/ensure_python.sh") && "$PY" "$ROOT/scripts/mcai_webapp.py" adopt \
   --script-id 1IuPni22wuE21O2D8067d24eVKWVY_UWQdcf1Nc6NgHQ_iivzgtGOYETk \
   --slug orientation \
   --title "Master Concept — New Joiner Day 1 Setup" \
@@ -126,7 +129,8 @@ python3 ~/Dev/mcaidemo/mcai-webapp/scripts/mcai_webapp.py adopt \
 Then change one visible character in the HTML and:
 
 ```bash
-python3 ~/Dev/mcaidemo/mcai-webapp/scripts/mcai_webapp.py update --slug orientation
+ROOT=~/Dev/mcaidemo/mcai-webapp
+PY=$(sh "$ROOT/scripts/ensure_python.sh") && "$PY" "$ROOT/scripts/mcai_webapp.py" update --slug orientation
 ```
 
 **Expected:** `✅ web app URL unchanged — the short link needs no edit`, and
@@ -143,8 +147,8 @@ rethinking and the bug is in the `deployments.update` call.
 Publish the plugin at ~/Dev/mcaidemo/mcai-webapp to the ZorCorp zorskill marketplace,
 following ~/Dev/mcaidemo/mcai-webapp/PUBLISH.md exactly.
 
-Before step 5, run the "prove the update path" section at the bottom and show me the
-output — do not cut the release until I confirm the URL stayed the same.
+The update path is already verified (see "Update path: verified" below) — no need to
+re-run it unless you've touched the deployment update code.
 
 Use the zorskill-dev tooling for marketplace registration. Do not hand-edit
 marketplace.json or the zorskill README.

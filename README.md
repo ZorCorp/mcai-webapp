@@ -58,20 +58,14 @@ Same URL, same short link, new content.
 
 ## Prerequisites
 
-- **Python 3.8+** — stdlib only.
-- **A Google Desktop OAuth client.** Nothing ships with this plugin, by design. If you use
-  the [gws CLI](https://github.com/googleworkspace/cli) you already have one at
-  `~/.config/gws-<profile>/client_secret.json` and it's found automatically. Otherwise create
-  a Desktop client in your own GCP project and set `MCAI_CLIENT_SECRET` to the downloaded
-  JSON.
-
-  > Careful: `oauth-client.json` sitting next to it in the same folder is a *different,
-  > inactive* client. Minting against it fails. Use `client_secret.json`.
-
+- **Python 3.8+** — stdlib only. If the machine has none, `/mcai-webapp:setup` installs a
+  pinned, checksum-verified interpreter from python.org automatically.
+- **An mcai.dev API key** — <https://mcai.dev/admin/> → Settings → API Keys. There is nothing
+  else to set up: the Google OAuth client itself is issued by mcai.dev against this same key,
+  so no one creates one in GCP by hand.
 - **The Apps Script API turned on** at <https://script.google.com/home/usersettings>. Per-user
   toggle, off by default, and the resulting error only appears *after* you authorise — which
   is confusing, so the skill names it explicitly.
-- **An mcai.dev API key** — <https://mcai.dev/admin/> → Settings → API Keys.
 
 Only two OAuth scopes are requested: `script.projects` and `script.deployments`. The skill
 cannot read your mail, Drive, or Sheets.
@@ -120,6 +114,7 @@ prints a loud warning.
 |---|---|---|
 | `token.json` | OAuth token | 600 |
 | `.env` | `MCAI_API_KEY=…` | 600 |
+| `client.json` | cached OAuth client | 600 |
 | `registry.json` | slug → scriptId, deploymentId, execUrl, source | 644 |
 
 `registry.json` is the only irreplaceable one — it holds the deployment ids. Back it up. If
@@ -129,7 +124,7 @@ you lose it, `/mcai-webapp:adopt` can rebuild an entry from a scriptId.
 
 | Var | Purpose | Default |
 |---|---|---|
-| `MCAI_CLIENT_SECRET` | Path to the Desktop OAuth client JSON | auto-found under `~/.config/gws*/` |
+| `MCAI_CLIENT_SECRET` | Override path to your own OAuth client JSON | mcai.dev issues one automatically |
 | `MCAI_GOOGLE_ACCOUNT` | `login_hint` on the consent screen | none |
 | `MCAI_CHROME_PROFILE` | Chrome profile for consent, e.g. `Default` | system default browser |
 | `MCAI_API_KEY` | mcai.dev key, overriding `.env` | from `.env` |
@@ -141,9 +136,9 @@ you lose it, `/mcai-webapp:adopt` can rebuild an entry from a scriptId.
 
 | Symptom | Action |
 |---|---|
-| `NO_CLIENT_SECRET` | Set `MCAI_CLIENT_SECRET` to your Desktop OAuth client JSON. |
-| `MULTIPLE_CLIENT_SECRETS` | Several gws profiles — pick one via `MCAI_CLIENT_SECRET`. |
-| `BAD_CLIENT_SECRET` | No `installed` key. You're pointing at `oauth-client.json`; use `client_secret.json`. |
+| `NO_OAUTH_CLIENT` | mcai.dev has no OAuth client configured yet. An admin must paste one at mcai.dev/admin/ → Settings. |
+| `OAUTH_CLIENT_FETCH_FAILED` | mcai.dev returned an error (HTTP 4xx/5xx) while fetching the client. Retry; if it persists, check mcai.dev's status. |
+| `NETWORK_ERROR` | Couldn't reach mcai.dev at all — offline, DNS, or a firewall. Check the network and retry. |
 | `APPS_SCRIPT_API_DISABLED` | Enable at <https://script.google.com/home/usersettings>, wait ~1 min, retry. |
 | `AUTH_ERROR: access_denied` | Admin policy blocks this OAuth client. Ask for an allowlist, or use an Internal client from your own GCP project. |
 | `AUTH_TIMEOUT` | Consent opened in the wrong Chrome profile. Set `MCAI_CHROME_PROFILE=Default` and retry. |
@@ -153,14 +148,28 @@ you lose it, `/mcai-webapp:adopt` can rebuild an entry from a scriptId.
 | `SLUG_TAKEN_ON_MCAI` | Pick another slug, or `adopt` the existing link. |
 | `UNKNOWN_APP` | Published from another machine — `adopt` it here first. |
 | `NO_WEB_APP_ENTRY_POINT` | The manifest lost its lowercase `webapp` block. Rerun `update`. |
+| `PYTHON_DOWNLOAD_FAILED` | Couldn't download the Python installer from python.org. Check the network or a proxy, then retry. |
+| `PYTHON_CHECKSUM_MISMATCH` | The downloaded Python installer didn't match its expected checksum. Retry, or check for a proxy tampering with the download. |
+| `INSTALL_CANCELLED` / `NOT_ADMIN` | The Python installer needs admin rights. Ask an administrator to run it, or install Python 3.8+ yourself. |
+| `PYTHON_INSTALL_FAILED` | The installer ran but no usable Python turned up afterwards. Install Python 3.8+ manually and retry. |
 | Unexpected login wall | `DOMAIN` app opened in a personal Google profile. Use the work profile. |
 | CJK title → slug `app` | Slugs are `[a-z0-9-]` only. Pass `--slug` explicitly. |
+
+`setup` always contacts mcai.dev to fetch the OAuth client (it never trusts the local cache),
+so on an already-configured machine `setup` fails if mcai.dev is unreachable — that's how a
+centrally rotated client reaches machines that were set up before the rotation. Every other
+command reads the cached `client.json` and doesn't need mcai.dev to be up.
+
+If `client.json` becomes corrupt it is silently refetched — it's the tool's own write, so a
+bad copy is treated as a cache miss rather than an error. `MCAI_CLIENT_SECRET`, by contrast,
+is an explicit override: if it points at a missing or invalid file that's a hard failure
+(`CLIENT_SECRET_NOT_FOUND` / `BAD_OAUTH_CLIENT`), never a silent fallback.
 
 ## Hard don'ts
 
 - **Don't `publish` an app twice.** It builds a second, unrelated project. Use `update`.
 - **Don't delete `registry.json`.** It holds the deployment ids that keep URLs stable.
-- **Don't echo `token.json` or `.env`.** Both are chmod 600 for a reason.
+- **Don't echo `token.json`, `.env`, or `client.json`.** All three are chmod 600 for a reason.
 - **Don't use an Embed link for an org-only app.** Google login can't render in an iframe.
   The skill only creates Redirect links.
 - **Don't `--access anyone` (or `gmail`) anything internal.** `ANYONE_ANONYMOUS` is genuinely anyone.

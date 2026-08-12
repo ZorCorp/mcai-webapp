@@ -21,7 +21,7 @@ fast (`new-joiner-day-1-setup`) and produces just `app` for CJK titles.
 This is for new apps only. If the app already exists, use `/mcai-webapp:update` — publishing
 again would create a second, unrelated project.
 
-! python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" publish $ARGUMENTS
+! PY=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/ensure_python.sh") && "$PY" "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" publish $ARGUMENTS
 
 Relay the short link, the access level, and the `deploymentId` verbatim. If the redirect
 could not be confirmed, say so plainly rather than declaring success — the app is deployed

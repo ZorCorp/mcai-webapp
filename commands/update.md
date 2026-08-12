@@ -17,7 +17,7 @@ explicitly if the file moved or the app was adopted without one.
 as it was. Widening access (org → gmail/anyone) deserves an explicit confirmation from the
 user — say what will become visible to whom.
 
-! python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" update $ARGUMENTS
+! PY=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/ensure_python.sh") && "$PY" "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" update $ARGUMENTS
 
 The expected output includes `web app URL unchanged — the short link needs no edit`. If
 instead it warns that the URL changed, surface that prominently: it means the deployment was

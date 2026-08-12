@@ -18,7 +18,7 @@ one HTTP request per app.
 The registry is per-machine. Apps published from another computer won't appear here until
 they are adopted.
 
-! python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" list $ARGUMENTS
+! PY=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/ensure_python.sh") && "$PY" "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" list $ARGUMENTS
 
 If `--check` flags anything as `⚠️ points elsewhere` or `❌`, name the affected slugs and
 suggest `/mcai-webapp:adopt` to re-sync the record — do not attempt to repair links without

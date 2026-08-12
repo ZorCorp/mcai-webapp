@@ -7,7 +7,7 @@ Publishes HTML as a Google Apps Script web app and fronts it with an mcai.dev sh
 - **Never create a second deployment for an existing app.** `deployments.create` mints a new
   `/exec` URL and silently orphans the mcai.dev link. Updates must go through
   `PUT projects/{scriptId}/deployments/{deploymentId}`.
-- **Never print the contents of `~/.mcai-webapp/token.json` or `.env`.** Both are chmod 600.
+- **Never print the contents of `~/.mcai-webapp/token.json`, `.env`, or `client.json`.** All three are chmod 600.
 - **`access: DOMAIN` implies `link_type: redirect`.** An org-only app sits behind Google
   login and cannot be iframed; an Embed link would render a login wall.
 

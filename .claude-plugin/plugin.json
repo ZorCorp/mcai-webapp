@@ -1,6 +1,6 @@
 {
   "name": "mcai-webapp",
-  "description": "Publish an HTML page as a Google Apps Script web app under your own Workspace account and give it a branded mcai.dev short link — org-only or public, your choice. Self-service: bring your own Google Desktop OAuth client and an mcai.dev API key; no MCP server, no clasp, no Node. Updates redeploy in place so the /exec URL and the short link never change.",
+  "description": "Publish an HTML page as a Google Apps Script web app under your own Workspace account and give it a branded mcai.dev short link — org-only or public, your choice. All you need is an mcai.dev API key; no MCP server, no clasp, no Node. Updates redeploy in place so the /exec URL and the short link never change.",
   "version": "0.1.0",
   "author": {
     "name": "ZorCorp",

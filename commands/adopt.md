@@ -18,7 +18,7 @@ name the file explicitly.
 
 If the slug already exists on mcai.dev it is reused and repointed, not duplicated.
 
-! python3 "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" adopt $ARGUMENTS
+! PY=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/ensure_python.sh") && "$PY" "${CLAUDE_PLUGIN_ROOT}/scripts/mcai_webapp.py" adopt $ARGUMENTS
 
 Report which deployment was adopted and whether the short link was created fresh or repointed
 at a new target — repointing changes where an already-circulated link goes, so the user
