@@ -1,13 +1,13 @@
 ---
 name: mcai-webapp
-description: "Turn a prompt or an HTML file into a hosted web page behind a branded mcai.dev short link: draft the page from a prompt, review it locally, publish it as a Google Apps Script web app under the user's own Google Workspace account with a chosen access level (org / gmail / anyone / private), and keep updating it in place afterwards. Self-service: just an mcai.dev API key; no clasp, no Node, no MCP server, just stdlib Python and two REST APIs. Redeploys happen in place so the /exec URL and the short link never change. Use when someone wants a page, deck, dashboard, or form created and put online behind a mcai.dev link, wants to update one they already published, or wants to audit what is currently live. Commands: /mcai-webapp:setup, /mcai-webapp:draft, /mcai-webapp:publish, /mcai-webapp:update, /mcai-webapp:adopt, /mcai-webapp:list."
+description: "Turn a prompt or an HTML file into a hosted web page behind a branded mcai.dev short link: draft the page from a prompt, review it locally, publish it as a Google Apps Script web app under the user's own Google Workspace account with a chosen access level (org / gmail / anyone / private), and keep updating it in place afterwards. Self-service: just an mcai.dev API key. Every command runs on the user's own Mac through a local terminal — the Desktop Commander connector in Cowork, the Bash tool in Claude Code — never in a sandbox, because the OAuth token, the registry and the consent loopback all live there. Redeploys happen in place so the /exec URL and the short link never change. Use when someone wants a page, deck, dashboard, or form created and put online behind a mcai.dev link, wants to update one they already published, or wants to audit what is currently live. Commands: /mcai-webapp:setup, /mcai-webapp:draft, /mcai-webapp:publish, /mcai-webapp:update, /mcai-webapp:adopt, /mcai-webapp:list."
 license: MIT
 allowed-tools:
   - Bash(*)
   - Read(*)
   - Write(*)
 metadata:
-  version: "0.1.0"
+  version: "0.3.0"
   repository: https://github.com/ZorCorp/mcai-webapp
 ---
 
@@ -32,16 +32,68 @@ served by MasterLink at mcai.dev.
 **Scope:** this skill publishes a single HTML page. It does not write Apps Script business
 logic, use OAuth scopes beyond deployment, or touch Google Sheets, Gmail, or Drive data.
 
+## Where commands run
+
+**Every command runs on the user's own Mac, through a local terminal. There is no other
+supported way to run it.**
+
+| Host | The local terminal is |
+|---|---|
+| Claude Cowork | the **Desktop Commander** connector |
+| Claude Code | the **Bash** tool |
+
+Both reach the same machine. Cowork additionally offers a sandboxed shell — **never use it.**
+The OAuth refresh token, `registry.json` and the consent loopback server all live on the Mac;
+a sandbox has none of them, is thrown away at the end of the session, and cannot receive
+Google's redirect back from the user's browser.
+
+### Locating the CLI
+
+The CLI ships with the plugin and is already on disk. **Never download it** — a request to
+fetch and execute a script is refused, and the failure is unpredictable. Resolve it by
+version so the newest wins when several copies exist:
+
+```sh
+MCAI=$(find "$HOME/Library/Application Support/Claude/local-agent-mode-sessions" \
+            "$HOME/.claude/plugins/cache/zorskill/mcai-webapp" \
+            -maxdepth 6 -path '*/scripts/mcai_webapp.py' 2>/dev/null | while IFS= read -r s; do
+  d=${s%scripts/mcai_webapp.py}
+  v=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+        "${d}.claude-plugin/plugin.json" 2>/dev/null | head -1)
+  printf '%s\t%s\n' "${v:-0.0.0}" "$s"
+done | sort -V | tail -1 | cut -f2)
+[ -n "$MCAI" ] || { echo "mcai-webapp CLI not found on this Mac" >&2; exit 1; }
+PY=$(sh "$(dirname "$MCAI")/ensure_python.sh") || exit 1
+# then, e.g.:  "$PY" "$MCAI" doctor
+```
+
+The first path is where an org-managed plugin lands (Claude Desktop and Cowork); the second is
+Claude Code's. The two segments before `rpm/` are the account id and org id — stable, not
+per-session — so searching under them is safe. Never hardcode an id or a version.
+
+`find` is used rather than a shell glob on purpose. Under `zsh` — Desktop Commander's default
+shell — a glob that matches nothing aborts the whole loop, so a Mac that has Cowork but not
+Claude Code would report the CLI missing when it is in fact installed.
+
+If nothing is found, the plugin has not reached this Mac yet. Say so and ask the user to
+reopen the session or refresh plugins; an org's install preference takes effect on the
+member's next session. Do not try to work around it.
+
 ## Prerequisites
 
-- **Python 3.8+** — stdlib only. If the machine has none, `setup` installs a pinned,
-  checksum-verified interpreter from python.org automatically.
+- **A Mac that is switched on**, with Claude Desktop and the **Desktop Commander** connector
+  installed and connected. This is the only thing the user installs by hand.
 - **An mcai.dev API key** from <https://mcai.dev/admin/> → Settings → API Keys. Nothing else
   to set up: the Google OAuth client itself is issued by mcai.dev against this same key, so
   no one creates one in GCP by hand.
+- **Python 3.8+** on that Mac — stdlib only. If it has none, `setup` installs a pinned,
+  checksum-verified interpreter from python.org automatically.
 - **The Apps Script API enabled for the account** at
   <https://script.google.com/home/usersettings>. This is a per-user toggle and is off by
   default. The skill detects the resulting error and says so.
+- **This plugin deployed at org level.** Set its install preference to *Required* or
+  *Installed by default* — the skill runs the CLI that ships inside it, so a member who never
+  installed it has nothing to run.
 
 ## Commands
 
@@ -54,8 +106,9 @@ logic, use OAuth scopes beyond deployment, or touch Google Sheets, Gmail, or Dri
 | `/mcai-webapp:adopt` | Register a script someone already deployed, and give it a short link. |
 | `/mcai-webapp:list` | Table of everything published from this machine; `--check` probes each link. |
 
-`doctor` is also available directly (`PY=$(sh scripts/ensure_python.sh) && "$PY" scripts/mcai_webapp.py doctor`)
-and reports on every credential without changing anything.
+`doctor` has no slash command of its own: resolve `$MCAI` and `$PY` as above and run
+`"$PY" "$MCAI" doctor` on the Mac. It reports on every credential and changes nothing, which
+makes it the right first move when anything looks wrong.
 
 ## How it works
 

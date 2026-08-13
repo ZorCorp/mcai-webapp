@@ -56,13 +56,26 @@ Same URL, same short link, new content.
 | `/mcai-webapp:adopt` | Register a script deployed elsewhere. |
 | `/mcai-webapp:list` | What's live; `--check` probes each link. |
 
+## Where it runs
+
+Every command runs on **your own Mac**, through a local terminal — the **Desktop Commander**
+connector in Claude Cowork, the Bash tool in Claude Code. Both reach the same machine.
+
+Cowork also offers a sandboxed shell; this skill never uses it. Your OAuth token, your
+`registry.json` and the consent loopback all live on the Mac. A sandbox has none of them, is
+discarded when the session ends, and cannot receive Google's redirect back from your browser.
+
 ## Prerequisites
 
-- **Python 3.8+** — stdlib only. If the machine has none, `/mcai-webapp:setup` installs a
-  pinned, checksum-verified interpreter from python.org automatically.
+- **A Mac that is switched on**, with Claude Desktop and the **Desktop Commander** connector
+  installed. This is the only piece you install by hand.
 - **An mcai.dev API key** — <https://mcai.dev/admin/> → Settings → API Keys. There is nothing
   else to set up: the Google OAuth client itself is issued by mcai.dev against this same key,
   so no one creates one in GCP by hand.
+- **This plugin deployed at org level**, with its install preference set to *Required* or
+  *Installed by default* — the CLI ships inside the plugin, so it has to be on the Mac.
+- **Python 3.8+** on that Mac — stdlib only. If it has none, `/mcai-webapp:setup` installs a
+  pinned, checksum-verified interpreter from python.org automatically.
 - **The Apps Script API turned on** at <https://script.google.com/home/usersettings>. Per-user
   toggle, off by default, and the resulting error only appears *after* you authorise — which
   is confusing, so the skill names it explicitly.

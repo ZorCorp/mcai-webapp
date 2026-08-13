@@ -608,14 +608,10 @@ def cmd_setup(args):
     # failing here means we never open a browser the user cannot complete.
     key = args.api_key or os.environ.get("MCAI_API_KEY") or read_env().get("MCAI_API_KEY")
     if not key:
-        info(f"\nGenerate an API key at {MCAI_BASE}/admin/ → Settings → API Keys.")
-        try:
-            key = input("Paste the mcai.dev API key: ").strip()
-        except EOFError:
-            key = ""
-        if not key:
-            die("NO_MCAI_API_KEY", "no key entered",
-                f"rerun with  --api-key <key>  once you have one from {MCAI_BASE}/admin/")
+        # Never prompt. This runs through a terminal connector with no attached TTY,
+        # where input() blocks until the caller gives up rather than reaching anyone.
+        die("NO_MCAI_API_KEY", "no mcai.dev API key supplied",
+            f"pass  --api-key <key>  — generate one at {MCAI_BASE}/admin/ → Settings → API Keys")
 
     if not probe_mcai_key(key):
         die("MCAI_UNAUTHORIZED", "mcai.dev rejected that key",

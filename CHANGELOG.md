@@ -3,6 +3,22 @@
 All notable changes to `mcai-webapp` are documented here. Versioning is semver;
 new capability → minor, fix/docs → patch.
 
+## [0.3.0]
+
+- Every command now runs on the user's own Mac through a local terminal — the Desktop
+  Commander connector in Cowork, the Bash tool in Claude Code. The `!` execution lines are
+  gone, and with them the assumption that the host would run them somewhere useful.
+  In Cowork that host is a throwaway Linux sandbox, where the OAuth loopback cannot receive
+  Google's redirect from the user's browser, credentials do not survive the session, and the
+  macOS Python bootstrap does not apply. One path now serves both hosts.
+- The CLI is located by version from the plugin's own install directory, covering both the
+  org-managed path used by Claude Desktop and Cowork and Claude Code's plugin cache. It is
+  never downloaded: a request to fetch and execute a script is refused outright, so a design
+  that depended on it would fail unpredictably.
+- `setup` no longer prompts for the mcai.dev API key. A terminal connector has no attached
+  TTY, so the prompt reached nobody and simply hung; `--api-key` is now required and its
+  absence fails immediately.
+
 ## [0.2.0]
 
 - The Google OAuth client now comes from mcai.dev over the existing API key, so

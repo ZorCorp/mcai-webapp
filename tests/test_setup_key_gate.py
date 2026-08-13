@@ -1,6 +1,7 @@
 """cmd_setup must fail on a bad mcai.dev key before any browser opens."""
 
 import argparse
+import builtins
 import contextlib
 import importlib.util
 import io
@@ -92,6 +93,26 @@ class SetupKeyGateTest(unittest.TestCase):
 
         output = buf.getvalue()
         self.assertNotIn("OAuth client fetched from mcai.dev", output)
+        self.assertEqual(self.oauth_flow_calls, [])
+
+
+    def test_missing_key_dies_without_prompting(self):
+        """A terminal connector has no attached TTY. A prompt there reaches nobody
+        and blocks until the caller gives up, so cmd_setup must refuse outright."""
+        args = argparse.Namespace(api_key=None, force=False)
+
+        def must_not_prompt(*a, **k):
+            raise AssertionError("cmd_setup must never call input() — there is no TTY")
+
+        real_input = builtins.input
+        builtins.input = must_not_prompt
+        try:
+            with self.assertRaises(self.m.Fail) as ctx:
+                self.m.cmd_setup(args)
+        finally:
+            builtins.input = real_input
+
+        self.assertIn("NO_MCAI_API_KEY", str(ctx.exception))
         self.assertEqual(self.oauth_flow_calls, [])
 
 

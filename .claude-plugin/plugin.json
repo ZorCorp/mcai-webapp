@@ -1,6 +1,6 @@
 {
   "name": "mcai-webapp",
-  "description": "Publish an HTML page as a Google Apps Script web app under your own Workspace account and give it a branded mcai.dev short link — org-only or public, your choice. All you need is an mcai.dev API key; no MCP server, no clasp, no Node. Updates redeploy in place so the /exec URL and the short link never change.",
+  "description": "Publish an HTML page as a Google Apps Script web app under your own Workspace account and give it a branded mcai.dev short link \u2014 org-only or public, your choice. All you need is an mcai.dev API key. Every command runs on your own Mac through a local terminal (the Desktop Commander connector in Cowork, the Bash tool in Claude Code), never in a sandbox. Updates redeploy in place so the /exec URL and the short link never change.",
   "version": "0.2.0",
   "author": {
     "name": "ZorCorp",
