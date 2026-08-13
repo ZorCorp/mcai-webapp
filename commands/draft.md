@@ -8,6 +8,26 @@ Usage: `/mcai-webapp:draft <description of the page> [--slug <slug>] [--out <fil
 This is **step one** of the pipeline: prompt → draft → review → publish. It produces a local
 HTML file and never touches Google or mcai.dev.
 
+0. **If the page is a form, start from a template.** Four live in the plugin's
+   `templates/form/` directory — `google` (Material), `apple` (HIG), `minimal` (Swiss),
+   `corporate` (official document). Ask which look they want rather than picking one, then
+   read that file and fill it in; they share a structure, so the choice is cosmetic and
+   reversible.
+
+   The responses land in a Google Sheet by way of a **Google Form** — a Sheet has no public
+   write endpoint, so the page posts to a Form, which writes to its own linked Sheet. Ask
+   the user for the Form's link, read its public page, and pull each question's
+   `entry.XXXXXXXXX` id out of the `FB_PUBLIC_LOAD_DATA_` blob it embeds. **Show the
+   question-to-field mapping and get it confirmed before publishing** — a swapped pair puts
+   answers in the wrong column and nothing looks wrong afterwards.
+
+   Tell them plainly that anyone can read the Form endpoint from the page source and post
+   to it directly. That is fine for collecting internal responses and not fine if
+   submissions have to be trustworthy or restricted.
+
+   `templates/form/README.md` covers the rest. For anything that is not a form, carry on
+   from step 1.
+
 1. **Generate** a single, fully self-contained HTML file from the user's prompt:
    - Everything inline — CSS and JS in the file, no CDN links, no external fonts, no
      fetch/XHR. Apps Script serves one HTML file, byte for byte, inside an iframe on

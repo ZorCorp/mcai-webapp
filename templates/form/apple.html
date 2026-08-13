@@ -1,0 +1,168 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REPLACE — Form title</title>
+
+<!--
+  Style: Apple (HIG)  ·  grouped inset rows, large title, system font, one blue accent.
+
+  Fill in before publishing:
+    FORM_ACTION      the Google Form's .../formResponse URL
+    entry.XXXXXXXXX  one per field, taken from that Form
+
+  The font stack resolves to SF on Apple devices and to a sensible native face elsewhere,
+  so nothing is downloaded. Fields are rows in a rounded group, the way iOS Settings and
+  Apple's own sign-up forms present them, rather than separate boxed inputs.
+-->
+
+<style>
+  :root {
+    --accent: #0071e3;
+    --ink: #1d1d1f;
+    --ink-muted: #6e6e73;
+    --line: rgba(0,0,0,.10);
+    --group: #fff;
+    --page: #f5f5f7;
+    --error: #d70015;
+  }
+  /* Deliberately light-only, like the other three templates. These pages are filled in by
+     people the author never sees; if the author previews in light and a reader's OS is
+     dark, they are looking at a version nobody checked. Add a prefers-color-scheme block
+     here if you decide otherwise — the variables above are the only thing it needs. */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 56px 20px 80px;
+    background: var(--page);
+    color: var(--ink);
+    font: 400 17px/1.47 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 {
+    margin: 0 0 10px;
+    font-size: 40px; line-height: 1.1;
+    font-weight: 600; letter-spacing: -.022em;
+  }
+  .sub { margin: 0 0 40px; color: var(--ink-muted); font-size: 17px; letter-spacing: -.01em; }
+
+  /* One rounded group; each field is a row separated by a hairline that stops short of
+     the left edge, matching the inset-list convention. */
+  .group {
+    background: var(--group);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .row { position: relative; display: flex; align-items: baseline; gap: 14px; padding: 14px 18px; }
+  .row + .row::before {
+    content: ""; position: absolute; left: 18px; right: 0; top: 0; height: 1px; background: var(--line);
+  }
+  .row label {
+    flex: 0 0 116px;
+    color: var(--ink-muted);
+    font-size: 15px; letter-spacing: -.01em;
+  }
+  .row input, .row select, .row textarea {
+    flex: 1 1 auto; min-width: 0;
+    font: inherit; color: var(--ink);
+    background: transparent; border: 0; outline: none; padding: 0;
+  }
+  .row textarea { min-height: 76px; resize: vertical; line-height: 1.47; }
+  /* appearance:none strips the native arrow, so the row has to draw its own — without it
+     the field reads as plain text and nobody knows it opens. */
+  .row select {
+    appearance: none;
+    padding-right: 22px;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+      linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+    background-position: calc(100% - 11px) center, calc(100% - 6px) center;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+  }
+  .row input::placeholder, .row textarea::placeholder { color: color-mix(in srgb, var(--ink-muted) 60%, transparent); }
+  .row:focus-within { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .req { color: var(--error); }
+
+  .actions { margin: 32px 0 0; text-align: center; }
+  button {
+    font: 400 17px/1 inherit;
+    letter-spacing: -.01em;
+    color: #fff; background: var(--accent);
+    border: 0; border-radius: 980px;
+    padding: 13px 34px;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+  }
+  button:hover { opacity: .85; }
+  button:active { transform: scale(.98); }
+  button:disabled { opacity: .4; cursor: default; transform: none; }
+
+  #msg { margin: 18px 0 0; font-size: 15px; letter-spacing: -.01em; min-height: 22px; text-align: center; }
+  #msg.ok { color: #1d8a3c; }
+  #msg.err { color: var(--error); }
+  .foot { margin: 34px 0 0; text-align: center; color: var(--ink-muted); font-size: 12px; }
+</style>
+
+<div class="wrap">
+  <h1>REPLACE — Form title</h1>
+  <p class="sub">REPLACE — one line telling people what this is for.</p>
+
+  <form id="f" novalidate>
+    <div class="group">
+      <div class="row">
+        <label for="q1">Name <span class="req">*</span></label>
+        <input id="q1" name="entry.XXXXXXXXX" placeholder="Your name" required>
+      </div>
+      <div class="row">
+        <label for="q2">Email <span class="req">*</span></label>
+        <input id="q2" name="entry.XXXXXXXXX" type="email" placeholder="you@example.com" required>
+      </div>
+      <div class="row">
+        <label for="q3">REPLACE <span class="req">*</span></label>
+        <select id="q3" name="entry.XXXXXXXXX" required>
+          <option value="" disabled selected>Choose…</option>
+          <option>REPLACE — option one</option>
+          <option>REPLACE — option two</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="q4">Notes</label>
+        <textarea id="q4" name="entry.XXXXXXXXX" placeholder="Optional"></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit">Submit</button>
+      <p id="msg" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+
+  <p class="foot">REPLACE — who to contact if something looks wrong.</p>
+</div>
+
+<script>
+  var FORM_ACTION = 'https://docs.google.com/forms/d/e/REPLACE/formResponse';
+
+  var f = document.getElementById('f'), msg = document.getElementById('msg');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!f.checkValidity()) { f.reportValidity(); return; }
+    var btn = f.querySelector('button');
+    btn.disabled = true; msg.className = ''; msg.textContent = 'Sending…';
+
+    // Google Forms sends no CORS headers, so the response is opaque: a resolved fetch
+    // means the request left the browser, not that the row was written.
+    fetch(FORM_ACTION, { method: 'POST', mode: 'no-cors', body: new FormData(f) })
+      .then(function () {
+        f.reset();
+        msg.className = 'ok';
+        msg.textContent = 'Thanks — your response has been recorded.';
+      })
+      .catch(function () {
+        msg.className = 'err';
+        msg.textContent = 'Could not send. Check your connection and try again.';
+      })
+      .then(function () { btn.disabled = false; });
+  });
+</script>

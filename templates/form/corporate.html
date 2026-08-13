@@ -1,0 +1,188 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REPLACE — Form title</title>
+
+<!--
+  Style: Corporate  ·  serif headings over a sans body, muted navy, bordered panel,
+  numbered sections. Reads as an official document rather than a product screen.
+
+  Fill in before publishing:
+    FORM_ACTION      the Google Form's .../formResponse URL
+    entry.XXXXXXXXX  one per field, taken from that Form
+
+  Use this when the page carries the organisation's name and the reader should feel it
+  came from the organisation, not from an app: registrations, declarations, requests.
+-->
+
+<style>
+  :root {
+    --navy: #143c5a;
+    --navy-dark: #0e2c42;
+    --ink: #1f2933;
+    --ink-muted: #5a6a76;
+    --line: #d5dde3;
+    --panel: #fff;
+    --page: #eef2f5;
+    --error: #a12020;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 16px 72px;
+    background: var(--page);
+    color: var(--ink);
+    font: 400 15px/1.62 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .panel {
+    max-width: 680px; margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-top: 4px solid var(--navy);
+  }
+  header { padding: 32px 40px 26px; border-bottom: 1px solid var(--line); }
+  .org { margin: 0 0 14px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--navy); font-weight: 600; }
+  h1 { margin: 0 0 10px; font: 400 27px/1.25 Georgia, "Times New Roman", serif; color: var(--navy-dark); }
+  .sub { margin: 0; color: var(--ink-muted); font-size: 14px; max-width: 56ch; }
+
+  .body { padding: 30px 40px 36px; }
+  fieldset { border: 0; margin: 0 0 30px; padding: 0; }
+  legend {
+    padding: 0; margin: 0 0 18px;
+    font: 600 12px/1 inherit; letter-spacing: .1em; text-transform: uppercase; color: var(--navy);
+  }
+  legend .n {
+    display: inline-block; width: 20px; height: 20px; margin-right: 9px;
+    border-radius: 50%; background: var(--navy); color: #fff;
+    font-size: 11px; line-height: 20px; text-align: center; letter-spacing: 0;
+  }
+
+  .field { margin: 0 0 20px; }
+  .field label { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    font: inherit; color: var(--ink);
+    background: #fcfdfe;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .field textarea { min-height: 96px; resize: vertical; }
+  /* Longhand on purpose: in the `background` shorthand a colour is only valid on the
+     final layer, so `background: #fcfdfe linear-gradient(…), linear-gradient(…)` is
+     dropped outright and the arrow disappears. */
+  .field select {
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--navy) 50%),
+      linear-gradient(135deg, var(--navy) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 18px, calc(100% - 12px) 18px;
+    background-size: 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+  }
+  /* background-color, not background — the shorthand would clear the arrow on focus. */
+  .field input:focus, .field select:focus, .field textarea:focus {
+    background-color: #fff; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(20,60,90,.10);
+  }
+  .hint { margin: 5px 0 0; font-size: 12px; color: var(--ink-muted); }
+  .req { color: var(--error); }
+
+  .actions { padding-top: 22px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  button {
+    font: 600 14px/1 inherit;
+    color: #fff; background: var(--navy);
+    border: 1px solid var(--navy); border-radius: 2px;
+    padding: 12px 30px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: var(--navy-dark); }
+  button:disabled { background: #9fb0bd; border-color: #9fb0bd; cursor: default; }
+
+  #msg { margin: 0; font-size: 13px; }
+  #msg.ok { color: #1c6b3a; font-weight: 600; }
+  #msg.err { color: var(--error); font-weight: 600; }
+  .foot { padding: 18px 40px 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-muted); }
+</style>
+
+<div class="panel">
+  <header>
+    <p class="org">REPLACE — Organisation</p>
+    <h1>REPLACE — Form title</h1>
+    <p class="sub">REPLACE — what this form is for, who should complete it, and the deadline if there is one.</p>
+  </header>
+
+  <div class="body">
+    <form id="f" novalidate>
+      <fieldset>
+        <legend><span class="n">1</span>Your details</legend>
+
+        <div class="field">
+          <label for="q1">Full name <span class="req">*</span></label>
+          <input id="q1" name="entry.XXXXXXXXX" required>
+        </div>
+
+        <div class="field">
+          <label for="q2">Email address <span class="req">*</span></label>
+          <input id="q2" name="entry.XXXXXXXXX" type="email" required>
+          <p class="hint">REPLACE — confirmation will be sent here.</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="n">2</span>REPLACE — Section title</legend>
+
+        <div class="field">
+          <label for="q3">REPLACE — choice <span class="req">*</span></label>
+          <select id="q3" name="entry.XXXXXXXXX" required>
+            <option value="" disabled selected>Please select</option>
+            <option>REPLACE — option one</option>
+            <option>REPLACE — option two</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="q4">Remarks</label>
+          <textarea id="q4" name="entry.XXXXXXXXX"></textarea>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit">Submit</button>
+        <p id="msg" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </div>
+
+  <p class="foot">REPLACE — contact for questions. Responses are collected by REPLACE.</p>
+</div>
+
+<script>
+  var FORM_ACTION = 'https://docs.google.com/forms/d/e/REPLACE/formResponse';
+
+  var f = document.getElementById('f'), msg = document.getElementById('msg');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!f.checkValidity()) { f.reportValidity(); return; }
+    var btn = f.querySelector('button');
+    btn.disabled = true; msg.className = ''; msg.textContent = 'Submitting…';
+
+    // Google Forms sends no CORS headers, so the response is opaque: a resolved fetch
+    // means the request left the browser, not that the row was written.
+    fetch(FORM_ACTION, { method: 'POST', mode: 'no-cors', body: new FormData(f) })
+      .then(function () {
+        f.reset();
+        msg.className = 'ok';
+        msg.textContent = 'Submitted. Thank you.';
+      })
+      .catch(function () {
+        msg.className = 'err';
+        msg.textContent = 'Submission failed. Please check your connection and try again.';
+      })
+      .then(function () { btn.disabled = false; });
+  });
+</script>
