@@ -54,6 +54,7 @@ Same URL, same short link, new content.
 | `/mcai-webapp:publish` | New app: create, push, deploy, link, verify. |
 | `/mcai-webapp:update` | New content into the existing deployment. |
 | `/mcai-webapp:adopt` | Register a script deployed elsewhere. |
+| `/mcai-webapp:remove` | Delete the short link and undeploy the web app (confirms first). |
 | `/mcai-webapp:list` | What's live; `--check` probes each link. |
 
 ## Where it runs

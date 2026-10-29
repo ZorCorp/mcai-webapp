@@ -3,6 +3,15 @@
 All notable changes to `mcai-webapp` are documented here. Versioning is semver;
 new capability → minor, fix/docs → patch.
 
+## [Unreleased]
+
+- New `/mcai-webapp:remove` (`remove --slug S [--skip-link] --yes`): undeploys the Apps Script
+  web app, deletes the mcai.dev short link and forgets the registry entry. Dry run unless
+  `--yes`. The Apps Script project itself is left in Drive.
+- Masterlink connector support: link-only edits (name, description, target, category,
+  visibility) and deletes go through `masterlink_update_bookmark` /
+  `masterlink_delete_bookmark` when the connector is connected, with by-name confirmation.
+
 ## [0.3.0]
 
 - Every command now runs on the user's own Mac through a local terminal — the Desktop

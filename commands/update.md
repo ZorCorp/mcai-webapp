@@ -49,6 +49,20 @@ instead it warns that the URL changed, surface that prominently: it means the de
 recreated rather than updated, the skill has repointed the bookmark automatically, and anyone
 holding the old `/exec` URL now has a dead link.
 
+## Changing only the short link (name, description, target, category, visibility)
+
+For edits that do not touch the page content, use the **masterlink connector** instead of
+redeploying — no new Apps Script version is needed:
+
+- Find the bookmark: `masterlink_list_bookmarks` with `search=<slug>` (verify the `slug`).
+- `masterlink_update_bookmark` with its `id` and only the fields that change: `name`,
+  `description`, `target_url`, `category_id`, or `is_visible=false` to hide the link without
+  deleting it.
+- The connector cannot change a slug. To rename one, publish/adopt under the new slug
+  and `/mcai-webapp:remove` the old one.
+- Confirm with the user before editing: the bookmark list is a page the whole company sees.
+  Do not point an org-only app's `target_url` at anything but its own `/exec` URL.
+
 If it reports `UNKNOWN_APP`, the registry has no record of that slug — the app may have been
 published from a different machine. Use `/mcai-webapp:adopt` with the scriptId to register it
 here first.

@@ -1,6 +1,6 @@
 ---
 name: mcai-webapp
-description: "Turn a prompt or an HTML file into a hosted web page behind a branded mcai.dev short link: draft the page from a prompt, review it locally, publish it as a Google Apps Script web app under the user's own Google Workspace account with a chosen access level (org / gmail / anyone / private), and keep updating it in place afterwards. Self-service: just an mcai.dev API key. Every command runs on the user's own Mac through a local terminal — the Desktop Commander connector in Cowork, the Bash tool in Claude Code — never in a sandbox, because the OAuth token, the registry and the consent loopback all live there. Redeploys happen in place so the /exec URL and the short link never change. Use when someone wants a page, deck, dashboard, or form created and put online behind a mcai.dev link, wants to update one they already published, or wants to audit what is currently live. Commands: /mcai-webapp:setup, /mcai-webapp:draft, /mcai-webapp:publish, /mcai-webapp:update, /mcai-webapp:adopt, /mcai-webapp:list."
+description: "Turn a prompt or an HTML file into a hosted web page behind a branded mcai.dev short link: draft the page from a prompt, review it locally, publish it as a Google Apps Script web app under the user's own Google Workspace account with a chosen access level (org / gmail / anyone / private), and keep updating it in place afterwards. Self-service: just an mcai.dev API key. Every command runs on the user's own Mac through a local terminal — the Desktop Commander connector in Cowork, the Bash tool in Claude Code — never in a sandbox, because the OAuth token, the registry and the consent loopback all live there. Redeploys happen in place so the /exec URL and the short link never change. Use when someone wants a page, deck, dashboard, or form created and put online behind a mcai.dev link, wants to update one they already published, or wants to audit what is currently live. Commands: /mcai-webapp:setup, /mcai-webapp:draft, /mcai-webapp:publish, /mcai-webapp:update, /mcai-webapp:adopt, /mcai-webapp:remove, /mcai-webapp:list."
 license: MIT
 allowed-tools:
   - Bash(*)
@@ -103,6 +103,7 @@ member's next session. Do not try to work around it.
 | `/mcai-webapp:draft` | Prompt → self-contained HTML file, opened locally for review. Never publishes. |
 | `/mcai-webapp:publish` | New app — create project, push, deploy, create the short link, verify it. |
 | `/mcai-webapp:update` | Push new content to an existing app, redeploying in place. |
+| `/mcai-webapp:remove` | Take an app down — delete the short link and undeploy the web app. Confirms the exact app first. |
 | `/mcai-webapp:adopt` | Register a script someone already deployed, and give it a short link. |
 | `/mcai-webapp:list` | Table of everything published from this machine; `--check` probes each link. |
 
@@ -176,6 +177,25 @@ State lives in `~/.mcai-webapp/` (override with `MCAI_WEBAPP_HOME`).
 | `MCAI_API_KEY` | mcai.dev key, overriding `.env` | from `.env` |
 | `MCAI_TIMEZONE` | Manifest timezone | `Asia/Hong_Kong` |
 | `MCAI_BASE_URL` | MasterLink base URL | `https://mcai.dev` |
+
+## Managing links with the masterlink connector
+
+If the **masterlink** MCP connector is connected (tools `masterlink_list_bookmarks`,
+`masterlink_update_bookmark`, `masterlink_delete_bookmark`), use it for the mcai.dev side of
+changes and keep the CLI for the Apps Script side:
+
+| Want to | Use |
+|---|---|
+| Edit link name / description / target / category / visibility | `masterlink_update_bookmark` (no redeploy) |
+| Hide a link without deleting it | `masterlink_update_bookmark` with `is_visible=false` |
+| Delete a link and take the app down | `masterlink_delete_bookmark`, then `remove --skip-link --yes` |
+| Change page content | `/mcai-webapp:update` (CLI) |
+
+Rules: these bookmarks are a shared company page, so confirm every edit with the user, and
+before any delete name the exact bookmark and match its `slug` to what they asked for — never
+guess from a fuzzy search. The connector cannot set or change a slug; new links with a custom
+slug still go through `publish` / `adopt`. Without the connector, the CLI covers deletes via
+the mcai.dev API and metadata edits are not available.
 
 ## Hard don'ts
 

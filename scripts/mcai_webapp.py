@@ -901,6 +901,59 @@ def cmd_adopt(args):
         warn("no --html recorded, so /mcai-webapp:update will need the file passed explicitly")
 
 
+def cmd_remove(args):
+    reg = load_registry()
+    app = get_app(reg, args.slug)
+    script_id, deployment_id = app["scriptId"], app["deploymentId"]
+    bookmark_id = app.get("bookmarkId")
+
+    info(f"Removing {MCAI_BASE}/{args.slug}  ({app.get('title', '')})")
+    info(f"  web app   undeploy deployment {deployment_id}  (URL stops working)")
+    if args.skip_link:
+        info("  short link left alone (--skip-link: already deleted, e.g. via the masterlink connector)")
+    elif bookmark_id:
+        info(f"  short link delete mcai.dev bookmark {bookmark_id}")
+    else:
+        info("  short link no bookmarkId recorded — delete it by hand or with the masterlink connector")
+    info(f"  registry  forget '{args.slug}'")
+    info(f"  kept      the Apps Script project {script_id} stays in Drive (trash it there if unwanted)")
+
+    if not args.yes:
+        info("")
+        info("Dry run — nothing changed. Re-run with --yes once the user has confirmed.")
+        return
+
+    token = access_token()
+    info("Undeploying …")
+    status, payload = http_json(
+        "DELETE", f"{GAS_API}projects/{script_id}/deployments/{deployment_id}", None,
+        headers={"Authorization": "Bearer " + token},
+    )
+    if status == 404:
+        warn("deployment was already gone")
+    elif status >= 400:
+        text = json.dumps(payload)[:400] if isinstance(payload, (dict, list)) else str(payload)[:400]
+        die("APPS_SCRIPT_API_ERROR", f"HTTP {status} undeploying — {text}",
+            "nothing else was changed; fix the cause and rerun")
+    else:
+        ok("web app undeployed")
+
+    if not args.skip_link and bookmark_id:
+        status, payload = http_json(
+            "DELETE", f"{MCAI_BASE}/api/bookmarks.php?id={bookmark_id}", None,
+            headers={"X-API-Key": mcai_key()},
+        )
+        if status < 400 or status == 404:
+            ok("short link deleted")
+        else:
+            warn(f"could not delete the short link (HTTP {status}) — delete bookmark "
+                 f"{bookmark_id} with the masterlink connector or at {MCAI_BASE}/admin/")
+
+    del reg["apps"][args.slug]
+    save_registry(reg)
+    ok(f"forgot '{args.slug}'")
+
+
 def cmd_list(args):
     reg = load_registry()
     apps = reg["apps"]
@@ -1006,6 +1059,14 @@ def build_parser():
     s.add_argument("--icon", default="lucide:app-window")
     s.add_argument("--category-id", type=int)
     s.set_defaults(func=cmd_adopt)
+
+    s = sub.add_parser("remove", help="undeploy a web app and delete its short link")
+    s.add_argument("--slug", required=True, help="slug of the app to remove")
+    s.add_argument("--skip-link", action="store_true",
+                   help="leave the mcai.dev bookmark alone (already deleted elsewhere)")
+    s.add_argument("--yes", action="store_true",
+                   help="actually do it; without this the command only prints what it would do")
+    s.set_defaults(func=cmd_remove)
 
     s = sub.add_parser("list", help="show every app published from this machine")
     s.add_argument("--check", action="store_true", help="probe each short link and report its status")
