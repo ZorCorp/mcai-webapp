@@ -54,7 +54,7 @@ holding the old `/exec` URL now has a dead link.
 For edits that do not touch the page content, use the **masterlink connector** instead of
 redeploying — no new Apps Script version is needed:
 
-- Find the bookmark: `masterlink_list_bookmarks` with `search=<slug>` (verify the `slug`).
+- Find the bookmark with `masterlink_list_bookmarks` — its `search` matches name, description and target URL, **not the slug**, so search by the app's title or its deploymentId (part of the `/exec` URL); for a bare slug, list with `limit=200` and pick the row whose `slug` matches. Always verify the returned `slug`.
 - `masterlink_update_bookmark` with its `id` and only the fields that change: `name`,
   `description`, `target_url`, `category_id`, or `is_visible=false` to hide the link without
   deleting it.

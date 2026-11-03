@@ -44,7 +44,7 @@ unpredictably.
 
 3. **Delete the short link.** Prefer the **masterlink connector** when its tools are available
    (`masterlink_list_bookmarks`, `masterlink_delete_bookmark`):
-   - Take `bookmarkId` from the dry run, or `masterlink_list_bookmarks` with `search=<slug>`.
+   - Take `bookmarkId` from the dry run, or `masterlink_list_bookmarks` — its `search` matches name, description and target URL, **not the slug**, so search by the app's title or its deploymentId (part of the `/exec` URL); for a bare slug, list with `limit=200` and pick the row whose `slug` matches.
    - Check the returned bookmark's `slug` equals the requested slug before deleting; if
      two candidates match, stop and ask.
    - `masterlink_delete_bookmark` with that id.

@@ -5,6 +5,11 @@ new capability → minor, fix/docs → patch.
 
 ## [Unreleased]
 
+- Docs: `masterlink_list_bookmarks` search does not match slugs; look bookmarks up by
+  title or deploymentId, or list and filter on `slug`. Found in end-to-end testing.
+
+## [0.5.0]
+
 - New `/mcai-webapp:remove` (`remove --slug S [--skip-link] --yes`): undeploys the Apps Script
   web app, deletes the mcai.dev short link and forgets the registry entry. Dry run unless
   `--yes`. The Apps Script project itself is left in Drive.

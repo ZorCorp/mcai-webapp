@@ -193,7 +193,7 @@ changes and keep the CLI for the Apps Script side:
 
 Rules: these bookmarks are a shared company page, so confirm every edit with the user, and
 before any delete name the exact bookmark and match its `slug` to what they asked for — never
-guess from a fuzzy search. The connector cannot set or change a slug; new links with a custom
+guess from a fuzzy search. Its `search` does not match slugs — search by title or deploymentId, or list with `limit=200` and filter on `slug`. The connector cannot set or change a slug; new links with a custom
 slug still go through `publish` / `adopt`. Without the connector, the CLI covers deletes via
 the mcai.dev API and metadata edits are not available.
 
